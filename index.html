@@ -254,7 +254,16 @@
         feather.replace();
 
         // System Configuration
-        const apiKey = "AIzaSyCsngHXGt1Q6qo5JP0joVlTRLS6WulF0dA"; // API Key disematkan secara permanen untuk hosting
+        let apiKey = "AIzaSyCsngHXGt1Q6qo5JP0joVlTRLS6WulF0dA"; 
+        let modelVersion = "gemini-1.5-flash";
+
+        // Deteksi otomatis: Gunakan API Key di atas dan model stabil saat di-hosting,
+        // namun gunakan konfigurasi default (kosong) saat di-preview di dalam Canvas ini.
+        if (window.location.hostname === "" || window.location.hostname.includes("google") || window.location.hostname.includes("gstatic")) {
+            apiKey = "";
+            modelVersion = "gemini-2.5-flash-preview-09-2025";
+        }
+
         let currentResultText = "";
 
         // Elements Mapping
@@ -276,8 +285,7 @@
         const fetchWithBackoff = async (prompt, retries = 5) => {
             const delays = [1000, 2000, 4000, 8000, 16000];
             
-            // Menggunakan gemini-1.5-flash agar kompatibel dengan API Key publik di hosting (GitHub Pages)
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${apiKey}`;
             
             const systemPrompt = "Anda adalah asisten AI spesialis Modul Ajar Pembelajaran Mendalam tingkat lanjut. Anda WAJIB mematuhi seluruh struktur dan tag HTML/tabel yang diminta pengguna secara absolut. Pada bagian 'Pengalaman Belajar', Anda WAJIB menjabarkan SANGAT DETAIL dan KOMPREHENSIF (skenario lengkap guru dan siswa, tidak boleh sekilas). Isi data yang di dalam kurung (...). Gunakan bahasa Indonesia baku dan pedagogik.";
             
