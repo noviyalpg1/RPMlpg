@@ -66,7 +66,7 @@
                             <i data-feather="zap"></i>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold text-gray-800">Prompt Ajaib V3</h2>
+                            <h2 class="text-xl font-bold text-gray-800">Prompt Ajaib V3.1</h2>
                             <p class="text-xs text-gray-500">Super Lengkap & Tabel Komprehensif</p>
                         </div>
                     </div>
@@ -234,7 +234,7 @@
                         <!-- Loading State -->
                         <div id="loading-state" class="hidden h-full flex flex-col items-center justify-center text-indigo-500 min-h-[300px]">
                             <svg class="animate-spin mb-4" xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
-                            <p class="font-medium text-gray-600 animate-pulse text-center max-w-sm">Sedang menyusun skenario pembelajaran mendalam dan memformat tabel... Ini mungkin butuh waktu beberapa detik.</p>
+                            <p id="loading-text" class="font-medium text-gray-600 animate-pulse text-center max-w-sm">Sedang menyusun skenario pembelajaran mendalam dan memformat tabel... Ini mungkin butuh waktu beberapa detik.</p>
                         </div>
 
                         <!-- Final Content -->
@@ -255,13 +255,17 @@
 
         // System Configuration
         let apiKey = "AIzaSyCsngHXGt1Q6qo5JP0joVlTRLS6WulF0dA"; 
-        let modelVersion = "gemini-1.5-flash";
+        
+        // Setup Model Utama dan Fallback Model
+        let primaryModel = "gemini-1.5-flash-latest"; // Coba versi terupdate
+        let fallbackModel = "gemini-pro"; // Model universal (pasti didukung semua API Key)
+        let isCanvasPreview = false;
 
-        // Deteksi otomatis: Gunakan API Key di atas dan model stabil saat di-hosting,
-        // namun gunakan konfigurasi default (kosong) saat di-preview di dalam Canvas ini.
+        // Deteksi otomatis: Jika di-preview di dalam Canvas Google, gunakan setingan default internal.
         if (window.location.hostname === "" || window.location.hostname.includes("google") || window.location.hostname.includes("gstatic")) {
             apiKey = "";
-            modelVersion = "gemini-2.5-flash-preview-09-2025";
+            primaryModel = "gemini-2.5-flash-preview-09-2025";
+            isCanvasPreview = true;
         }
 
         let currentResultText = "";
@@ -276,16 +280,16 @@
             regenerateBtn: document.getElementById('regenerate-btn'),
             emptyState: document.getElementById('empty-state'),
             loadingState: document.getElementById('loading-state'),
+            loadingText: document.getElementById('loading-text'),
             resultContent: document.getElementById('result-content'),
             errorAlert: document.getElementById('error-alert'),
             errorMessage: document.getElementById('error-message')
         };
 
-        // Fetch with Backoff
+        // Fetch with Backoff & Auto-Fallback Model
         const fetchWithBackoff = async (prompt, retries = 5) => {
             const delays = [1000, 2000, 4000, 8000, 16000];
-            
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelVersion}:generateContent?key=${apiKey}`;
+            let currentModel = primaryModel;
             
             const systemPrompt = "Anda adalah asisten AI spesialis Modul Ajar Pembelajaran Mendalam tingkat lanjut. Anda WAJIB mematuhi seluruh struktur dan tag HTML/tabel yang diminta pengguna secara absolut. Pada bagian 'Pengalaman Belajar', Anda WAJIB menjabarkan SANGAT DETAIL dan KOMPREHENSIF (skenario lengkap guru dan siswa, tidak boleh sekilas). Isi data yang di dalam kurung (...). Gunakan bahasa Indonesia baku dan pedagogik.";
             
@@ -302,19 +306,30 @@
 
             for (let i = 0; i < retries; i++) {
                 try {
+                    const url = `https://generativelanguage.googleapis.com/v1beta/models/${currentModel}:generateContent?key=${apiKey}`;
                     const response = await fetch(url, options);
+                    
                     if (!response.ok) {
                         const errorData = await response.json();
-                        console.error("API Error Log:", errorData); // Log error untuk debugging di inspect element
+                        console.error("API Error Log:", errorData); 
                         
-                        if(response.status === 400 && errorData.error?.message?.includes("API key")) {
-                            throw new Error("API Key tidak valid. Pastikan API Key benar.");
-                        } else if (response.status === 404) {
-                            throw new Error("Model AI tidak ditemukan. Pastikan menggunakan model yang didukung.");
+                        // Sistem Fallback Otomatis
+                        // Jika model pertama tidak ditemukan (404) dan bukan di lingkungan Canvas, otomatis coba model universal (gemini-pro)
+                        if (response.status === 404 && !isCanvasPreview && currentModel !== fallbackModel) {
+                            console.warn(`Model ${currentModel} tidak didukung oleh API Key Anda. Mencoba beralih ke model ${fallbackModel}...`);
+                            els.loadingText.innerText = "Menyesuaikan versi AI yang kompatibel dengan API Key... Harap tunggu...";
+                            currentModel = fallbackModel;
+                            i--; // Ulangi iterasi ini dengan model baru
+                            continue;
                         }
-                        // Menampilkan pesan error asli dari Google jika ada
+
+                        if(response.status === 400 && errorData.error?.message?.includes("API key")) {
+                            throw new Error("API Key tidak valid atau telah dibatasi oleh Google.");
+                        } 
+                        
                         throw new Error(`Gagal terhubung ke AI (Error ${response.status}): ${errorData.error?.message || 'Kesalahan server'}`);
                     }
+                    
                     const data = await response.json();
                     return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal memproses respons AI.";
                 } catch (error) {
@@ -487,6 +502,7 @@ JANGAN membuat ringkasan singkat, tetapi buatlah uraian narasi skenario guru dan
             els.emptyState.classList.add('hidden');
             els.resultContent.classList.add('hidden');
             els.loadingState.classList.remove('hidden');
+            els.loadingText.innerText = "Sedang menyusun skenario pembelajaran mendalam dan memformat tabel... Ini mungkin butuh waktu beberapa detik.";
             
             els.submitBtn.disabled = true;
             els.submitBtn.innerHTML = '<svg class="animate-spin" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg> Meracik Modul Sangat Detail...';
