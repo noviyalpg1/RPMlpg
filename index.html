@@ -66,7 +66,7 @@
                             <i data-feather="zap"></i>
                         </div>
                         <div>
-                            <h2 class="text-xl font-bold text-gray-800">Prompt Ajaib V3.1</h2>
+                            <h2 class="text-xl font-bold text-gray-800">Prompt Ajaib V3.2</h2>
                             <p class="text-xs text-gray-500">Super Lengkap & Tabel Komprehensif</p>
                         </div>
                     </div>
@@ -254,14 +254,14 @@
         feather.replace();
 
         // System Configuration
-        let apiKey = "AIzaSyCDjOeiCRf3-qFrJIh5dHrapcTFR4Q6tlQ"; 
+        let apiKey = "AIzaSyCsngHXGt1Q6qo5JP0joVlTRLS6WulF0dA"; // API Key Asli Anda
         
         // Setup Model Utama dan Fallback Model
-        let primaryModel = "gemini-1.5-flash-latest"; // Coba versi terupdate
-        let fallbackModel = "gemini-pro"; // Model universal (pasti didukung semua API Key)
+        let primaryModel = "gemini-1.5-flash"; 
+        let fallbackModel = "gemini-pro"; 
         let isCanvasPreview = false;
 
-        // Deteksi otomatis: Jika di-preview di dalam Canvas Google, gunakan setingan default internal.
+        // Deteksi otomatis
         if (window.location.hostname === "" || window.location.hostname.includes("google") || window.location.hostname.includes("gstatic")) {
             apiKey = "";
             primaryModel = "gemini-2.5-flash-preview-09-2025";
@@ -293,9 +293,11 @@
             
             const systemPrompt = "Anda adalah asisten AI spesialis Modul Ajar Pembelajaran Mendalam tingkat lanjut. Anda WAJIB mematuhi seluruh struktur dan tag HTML/tabel yang diminta pengguna secara absolut. Pada bagian 'Pengalaman Belajar', Anda WAJIB menjabarkan SANGAT DETAIL dan KOMPREHENSIF (skenario lengkap guru dan siswa, tidak boleh sekilas). Isi data yang di dalam kurung (...). Gunakan bahasa Indonesia baku dan pedagogik.";
             
+            // PERBAIKAN: Menggabungkan system prompt ke teks utama agar kompatibel 100% dengan semua model (termasuk model lama gemini-pro)
+            const finalPrompt = systemPrompt + "\n\nINSTRUKSI:\n" + prompt;
+
             const payload = {
-                contents: [{ parts: [{ text: prompt }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] }
+                contents: [{ parts: [{ text: finalPrompt }] }]
             };
 
             const options = {
@@ -314,17 +316,16 @@
                         console.error("API Error Log:", errorData); 
                         
                         // Sistem Fallback Otomatis
-                        // Jika model pertama tidak ditemukan (404) dan bukan di lingkungan Canvas, otomatis coba model universal (gemini-pro)
                         if (response.status === 404 && !isCanvasPreview && currentModel !== fallbackModel) {
-                            console.warn(`Model ${currentModel} tidak didukung oleh API Key Anda. Mencoba beralih ke model ${fallbackModel}...`);
-                            els.loadingText.innerText = "Menyesuaikan versi AI yang kompatibel dengan API Key... Harap tunggu...";
+                            console.warn(`Model ${currentModel} tidak didukung. Beralih ke model ${fallbackModel}...`);
+                            els.loadingText.innerText = "Menyesuaikan versi AI... Harap tunggu...";
                             currentModel = fallbackModel;
                             i--; // Ulangi iterasi ini dengan model baru
                             continue;
                         }
 
                         if(response.status === 400 && errorData.error?.message?.includes("API key")) {
-                            throw new Error("API Key tidak valid atau telah dibatasi oleh Google.");
+                            throw new Error("API Key Anda tidak valid atau telah DIBLOKIR oleh Google karena terdeteksi di GitHub publik. Silakan generate Key baru di Google AI Studio.");
                         } 
                         
                         throw new Error(`Gagal terhubung ke AI (Error ${response.status}): ${errorData.error?.message || 'Kesalahan server'}`);
@@ -333,7 +334,7 @@
                     const data = await response.json();
                     return data.candidates?.[0]?.content?.parts?.[0]?.text || "Gagal memproses respons AI.";
                 } catch (error) {
-                    if (i === retries - 1 || error.message.includes("tidak valid") || error.message.includes("Error 400")) {
+                    if (i === retries - 1 || error.message.includes("DIBLOKIR") || error.message.includes("Error 400")) {
                         throw new Error(error.message || "Gagal terhubung ke server AI. Periksa koneksi internet Anda.");
                     }
                     await new Promise(res => setTimeout(res, delays[i]));
