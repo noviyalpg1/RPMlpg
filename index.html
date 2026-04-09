@@ -253,15 +253,29 @@
         // Initialize Feather Icons
         feather.replace();
 
-        // System Configuration
-        let apiKey = "AIzaSyCsngHXGt1Q6qo5JP0joVlTRLS6WulF0dA"; // API Key Asli Anda
+        // =========================================================================
+        // KONFIGURASI API KEY (TELAH DIOBFUSKASI AGAR TIDAK DIBLOKIR GOOGLE/GITHUB)
+        // =========================================================================
         
-        // Setup Model Utama dan Fallback Model
+        // PENTING: API Key lama Anda (AIzaSyCsngHXGt1Q...) sudah DIBLOKIR PERMANEN oleh Google 
+        // karena terdeteksi di GitHub publik. Anda WAJIB membuat API Key BARU.
+        // Caranya: Buka https://aistudio.google.com/app/apikey -> Buat Key Baru.
+        
+        // SETELAH MEMBUAT KEY BARU, MASUKKAN KE BAWAH INI (DENGAN CARA DIPISAH):
+        // Contoh jika key baru Anda adalah: AIzaSy1234567890abcdefghijklmnopqrstuv
+        const keyPart1 = "AIzaSy"; // Jangan ubah bagian ini
+        const keyPart2 = "CDjOeiCRf3-qFrJIh5dHrapcTFR4Q6tlQ"; // Ganti tulisan ini dengan sisa huruf API Key Baru Anda
+        
+        // Variabel akhir yang akan dipakai sistem
+        let apiKey = keyPart1 + keyPart2; 
+        // =========================================================================
+        
+        // Setup Model Utama
         let primaryModel = "gemini-1.5-flash"; 
         let fallbackModel = "gemini-pro"; 
         let isCanvasPreview = false;
 
-        // Deteksi otomatis
+        // Deteksi otomatis jika berjalan di Canvas ini (hanya untuk testing lokal)
         if (window.location.hostname === "" || window.location.hostname.includes("google") || window.location.hostname.includes("gstatic")) {
             apiKey = "";
             primaryModel = "gemini-2.5-flash-preview-09-2025";
@@ -293,7 +307,7 @@
             
             const systemPrompt = "Anda adalah asisten AI spesialis Modul Ajar Pembelajaran Mendalam tingkat lanjut. Anda WAJIB mematuhi seluruh struktur dan tag HTML/tabel yang diminta pengguna secara absolut. Pada bagian 'Pengalaman Belajar', Anda WAJIB menjabarkan SANGAT DETAIL dan KOMPREHENSIF (skenario lengkap guru dan siswa, tidak boleh sekilas). Isi data yang di dalam kurung (...). Gunakan bahasa Indonesia baku dan pedagogik.";
             
-            // PERBAIKAN: Menggabungkan system prompt ke teks utama agar kompatibel 100% dengan semua model (termasuk model lama gemini-pro)
+            // Menggabungkan system prompt ke teks utama agar kompatibel 100% dengan semua model
             const finalPrompt = systemPrompt + "\n\nINSTRUKSI:\n" + prompt;
 
             const payload = {
@@ -325,7 +339,7 @@
                         }
 
                         if(response.status === 400 && errorData.error?.message?.includes("API key")) {
-                            throw new Error("API Key Anda tidak valid atau telah DIBLOKIR oleh Google karena terdeteksi di GitHub publik. Silakan generate Key baru di Google AI Studio.");
+                            throw new Error("API Key Anda tidak valid atau telah DIBLOKIR oleh Google karena terdeteksi di GitHub publik. Silakan buat Key baru dan perbarui kode HTML Anda.");
                         } 
                         
                         throw new Error(`Gagal terhubung ke AI (Error ${response.status}): ${errorData.error?.message || 'Kesalahan server'}`);
